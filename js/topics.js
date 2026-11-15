@@ -14,49 +14,8 @@
 
 import { f, gcd, ONE } from './frac.js';
 import { rnd, pick } from './util.js';
-
-const MUL = 'כּוֹפְלִים מוֹנֶה בְּמוֹנֶה, וּמְכַנֶּה בִּמְכַנֶּה.';
-const SOLVE = 'פִּתְרוּ אֶת הַתַּרְגִּיל:';
-
-/** A proper fraction, usually already reduced. */
-function proper(minD, maxD) {
-    for (;;) {
-        const d = rnd(minD, maxD);
-        const n = rnd(1, d - 1);
-        if (gcd(n, d) === 1 || Math.random() < .2) return [n, d];
-    }
-}
-
-/** The closing steps: reduce, then write as a mixed number. */
-function finish(n, d) {
-    const steps = [];
-    const g = gcd(n, d);
-    const r = f(n, d);
-    if (g > 1 && r.d > 1) steps.push({ he: `מְצַמְצְמִים: מְחַלְּקִים אֶת הַמּוֹנֶה וְאֶת הַמְּכַנֶּה בְּ-${g}.`, m: `${n}/${d} = ${r.n}/${r.d}` });
-    if (r.d === 1 && d > 1) steps.push({ he: `הַמּוֹנֶה מִתְחַלֵּק בַּמְּכַנֶּה: ${n} לְחַלֵּק לְ-${d}.`, m: `${n}/${d} = ${r.n}` });
-    if (r.d > 1 && r.n > r.d) steps.push({ he: 'הַמּוֹנֶה גָּדוֹל מֵהַמְּכַנֶּה, אָז כּוֹתְבִים מִסְפָּר מְעוֹרָב.', m: `${r.n}/${r.d} = ${r.mk()}` });
-    return steps;
-}
-
-/** Reduce across the top and bottom of a product before multiplying. */
-function cancel(nums, dens) {
-    const top = [...nums];
-    const bottom = [...dens];
-    for (let i = 0; i < top.length; i++) {
-        for (let j = 0; j < bottom.length; j++) {
-            const g = gcd(top[i], bottom[j]);
-            top[i] /= g; bottom[j] /= g;
-        }
-    }
-    const show = (from, to) => from.map((v, k) => (v === to[k] ? v : `${v}>${to[k]}`)).join(' x ');
-    const prod = arr => arr.reduce((a, b) => a * b, 1);
-    return { changed: top.some((v, k) => v !== nums[k]), m: `[${show(nums, top)}]/[${show(dens, bottom)}]`, n: prod(top), d: prod(bottom) };
-}
-
-function traps(answer, list) {
-    const seen = [];
-    return list.filter(([v]) => v && !v.eq(answer) && !seen.some(s => s.eq(v)) && seen.push(v)).map(([v, he]) => ({ v, he }));
-}
+import { MUL, SOLVE, proper, finish, cancel, traps } from './gen.js';
+import { MORE_TOPICS } from './topics-more.js';
 
 const T_ADD = 'נִרְאֶה שֶׁחִיבַּרְתֶּם בִּמְקוֹם לִכְפּוֹל. בְּכֶפֶל שְׁבָרִים: מוֹנֶה כָּפוּל מוֹנֶה, וּמְכַנֶּה כָּפוּל מְכַנֶּה.';
 const T_CROSS = 'נִרְאֶה שֶׁכְּפַלְתֶּם בַּאֲלַכְסוֹן. בְּכֶפֶל שְׁבָרִים כּוֹפְלִים יָשָׁר: מוֹנֶה בְּמוֹנֶה, וּמְכַנֶּה בִּמְכַנֶּה.';
@@ -89,7 +48,31 @@ const T_LOST_WHOLE = 'שְׁכַחְתֶּם אֶת הַשָּׁלֵם! קוֹד
 const mkPart = p => (p.w ? `${p.w}_${p.n}/${p.d}` : `${p.n}/${p.d}`);
 const top = p => p.w * p.d + p.n;
 
+/** From the review sheet: a whole number that, times a mixed number, gives a whole number. */
+function genMakeWhole() {
+    const d = pick([2, 3, 4, 5, 6]);
+    const n = pick([1, 2, 3, 4, 5].filter(x => x < d && gcd(x, d) === 1));
+    const w = rnd(1, 3);
+    const m = f(w * d + n, d);
+    const mk = `${w}_${n}/${d}`;
+    return {
+        kind: 'box', he: `כִּתְבוּ מִסְפָּר שָׁלֵם, גָּדוֹל מֵאֶפֶס, שֶׁאִם נִכְפּוֹל אוֹתוֹ בְּ-{{${mk}}} נְקַבֵּל מִסְפָּר שָׁלֵם.`, m: `${mk} x □`,
+        plain: `${w} ${n}/${d} x (a whole number the pupil chose)`, answer: f(d),
+        check: v => v.d === 1 && v.n > 0 && v.mul(m).d === 1,
+        why: v => (v.d !== 1 ? 'הַמִּסְפָּר שֶׁבְּחַרְתֶּם אֵינוֹ שָׁלֵם. צָרִיךְ מִסְפָּר שָׁלֵם, כְּמוֹ 1, 2, 3.'
+            : v.n <= 0 ? 'צָרִיךְ מִסְפָּר גָּדוֹל מֵאֶפֶס.'
+            : `{{${mk} x ${v.n} = ${m.mul(v).mk()}}}, וְזֶה לֹא מִסְפָּר שָׁלֵם. נַסּוּ מִסְפָּר שֶׁמִּתְחַלֵּק בְּ-${d}.`),
+        hint: `הָפְכוּ אֶת {{${mk}}} לְשֶׁבֶר. בְּאֵיזֶה מִסְפָּר צָרִיךְ לִכְפּוֹל כְּדֵי שֶׁהַמְּכַנֶּה יִצְטַמְצֵם?`,
+        steps: [
+            { he: 'הוֹפְכִים אֶת הַמִּסְפָּר הַמְּעוֹרָב לְשֶׁבֶר.', m: `${mk} = ${m.n}/${d}` },
+            { he: `כְּשֶׁכּוֹפְלִים בְּמִסְפָּר שֶׁמִּתְחַלֵּק בְּ-${d}, הַמְּכַנֶּה מִצְטַמְצֵם, וְיוֹצֵא מִסְפָּר שָׁלֵם. לְמָשָׁל ${d}:`, m: `${m.n}/${d} x ${d} = ${m.n}` },
+            { he: `גַּם ${2 * d}, ${3 * d}, וְכָל מִסְפָּר שֶׁמִּתְחַלֵּק בְּ-${d}, מַתְאִימִים!`, m: `${m.n}/${d} x ${2 * d} = ${2 * m.n}` },
+        ],
+    };
+}
+
 function genMixed(level) {
+    if (level > 1 && Math.random() < .25) return genMakeWhole();
     const maxD = level === 1 ? 7 : 10;
     const part = whole => { const [n, d] = proper(2, maxD); return { w: whole ? rnd(1, level === 3 ? 3 : 2) : 0, n, d }; };
     let p, q;
@@ -289,7 +272,7 @@ function genWord(level) {
             ],
             traps: traps(answer, [
                 [f(some), 'מְצָאתֶם אֶת הַכַּמּוּת, יוֹפִי! עַכְשָׁיו צָרִיךְ עוֹד לִכְפּוֹל בַּמְּחִיר.'],
-                [f(total * p), 'חִישַּׁבְתֶּם אֶת הַמְּחִיר שֶׁל הַכֹּל. אֲבָל מְדֻבָּר רַק בְּחֵלֶק!'],
+                [f(total * p), 'חִישַּׁבְתֶּם אֶת הַמְּחִיר שֶׁל הַכֹּל. אֲבָל מְדוּבָּר רַק בְּחֵלֶק!'],
                 [f(total), 'מְצָאתֶם כַּמָּה יֵשׁ בְּסַךְ הַכֹּל. עַכְשָׁיו מוֹצְאִים אֶת הַחֵלֶק, וְכוֹפְלִים בַּמְּחִיר.'],
             ]),
         };
@@ -326,7 +309,7 @@ const chainDemo = cancel([1, 2, 6], [4, 3, 10]);
 
 export const TOPICS = [
     {
-        id: 'ff', icon: '✖️', color: '#22d3ee', title: 'כֶּפֶל שֶׁבֶר בְּשֶׁבֶר', sub: 'מוֹנֶה בְּמוֹנֶה, מְכַנֶּה בִּמְכַנֶּה', sample: '1/4 x 2/5', gen: genFF,
+        id: 'ff', group: 'frac', icon: '✖️', color: '#22d3ee', title: 'כֶּפֶל שֶׁבֶר בְּשֶׁבֶר', sub: 'מוֹנֶה בְּמוֹנֶה, מְכַנֶּה בִּמְכַנֶּה', sample: '1/4 x 2/5', gen: genFF,
         lesson: [
             { he: 'כְּדֵי לִכְפּוֹל שֶׁבֶר בְּשֶׁבֶר, כּוֹפְלִים מוֹנֶה בְּמוֹנֶה, וּמְכַנֶּה בִּמְכַנֶּה.', m: '1/4 x 2/5 = [1 x 2]/[4 x 5] = 2/20' },
             { he: 'בַּסּוֹף מְצַמְצְמִים: מְחַלְּקִים אֶת הַמּוֹנֶה וְאֶת הַמְּכַנֶּה בְּאוֹתוֹ מִסְפָּר.', m: '2/20 = 1/10' },
@@ -334,7 +317,7 @@ export const TOPICS = [
         ],
     },
     {
-        id: 'mixed', icon: '🧩', color: '#a78bfa', title: 'כֶּפֶל מִסְפָּרִים מְעוֹרָבִים', sub: 'קוֹדֶם הוֹפְכִים לְשֶׁבֶר', sample: '1/7 x 1_1/6', gen: genMixed,
+        id: 'mixed', group: 'frac', icon: '🧩', color: '#a78bfa', title: 'כֶּפֶל מִסְפָּרִים מְעוֹרָבִים', sub: 'קוֹדֶם הוֹפְכִים לְשֶׁבֶר', sample: '1/7 x 1_1/6', gen: genMixed,
         lesson: [
             { he: 'קוֹדֶם הוֹפְכִים כָּל מִסְפָּר מְעוֹרָב לְשֶׁבֶר: כּוֹפְלִים אֶת הַשָּׁלֵם בַּמְּכַנֶּה, וּמוֹסִיפִים אֶת הַמּוֹנֶה.', m: '1_1/6 = [1 x 6 + 1]/[6] = 7/6' },
             { he: `עַכְשָׁיו כּוֹפְלִים כָּרָגִיל: ${MUL}`, m: '1/7 x 7/6 = 7/42 = 1/6' },
@@ -342,7 +325,7 @@ export const TOPICS = [
         ],
     },
     {
-        id: 'whole', icon: '🔢', color: '#f472b6', title: 'כֶּפֶל שָׁלֵם בְּשֶׁבֶר', sub: 'הַשָּׁלֵם כּוֹפֵל אֶת הַמּוֹנֶה', sample: '5 x 7/10', gen: genWhole,
+        id: 'whole', group: 'frac', icon: '🔢', color: '#f472b6', title: 'כֶּפֶל שָׁלֵם בְּשֶׁבֶר', sub: 'הַשָּׁלֵם כּוֹפֵל אֶת הַמּוֹנֶה', sample: '5 x 7/10', gen: genWhole,
         lesson: [
             { he: 'כָּל מִסְפָּר שָׁלֵם אֶפְשָׁר לִכְתּוֹב כְּשֶׁבֶר עִם מְכַנֶּה 1.', m: '5 = 5/1' },
             { he: 'וְאָז כּוֹפְלִים כָּרָגִיל. בְּעֶצֶם, הַשָּׁלֵם כּוֹפֵל רַק אֶת הַמּוֹנֶה.', m: '5 x 7/10 = [5 x 7]/[1 x 10] = 35/10' },
@@ -350,7 +333,7 @@ export const TOPICS = [
         ],
     },
     {
-        id: 'chain', icon: '🔗', color: '#fb923c', title: 'כֶּפֶל שֶׁל כַּמָּה שְׁבָרִים', sub: 'מְצַמְצְמִים לִפְנֵי שֶׁכּוֹפְלִים', sample: '1/4 x 2/3 x 6/10', gen: genChain,
+        id: 'chain', group: 'frac', icon: '🔗', color: '#fb923c', title: 'כֶּפֶל שֶׁל כַּמָּה שְׁבָרִים', sub: 'מְצַמְצְמִים לִפְנֵי שֶׁכּוֹפְלִים', sample: '1/4 x 2/3 x 6/10', gen: genChain,
         lesson: [
             { he: 'כְּשֶׁיֵּשׁ כַּמָּה שְׁבָרִים, כּוֹתְבִים שֶׁבֶר אֶחָד גָּדוֹל: כָּל הַמּוֹנִים לְמַעְלָה, וְכָל הַמְּכַנִּים לְמַטָּה.', m: '1/4 x 2/3 x 6/10 = [1 x 2 x 6]/[4 x 3 x 10]' },
             { he: 'לִפְנֵי שֶׁכּוֹפְלִים, מְצַמְצְמִים: מְחַפְּשִׂים מִסְפָּר לְמַעְלָה וּמִסְפָּר לְמַטָּה שֶׁמִּתְחַלְּקִים בְּאוֹתוֹ מִסְפָּר.', m: chainDemo.m },
@@ -358,7 +341,7 @@ export const TOPICS = [
         ],
     },
     {
-        id: 'of', icon: '🍕', color: '#facc15', title: 'חֵלֶק שֶׁל כַּמּוּת', sub: '"שֶׁל" אוֹמֵר כֶּפֶל', sample: '2/5 שֶׁל 10', gen: genOf,
+        id: 'of', group: 'frac', icon: '🍕', color: '#facc15', title: 'חֵלֶק שֶׁל כַּמּוּת', sub: '"שֶׁל" אוֹמֵר כֶּפֶל', sample: '2/5 שֶׁל 10', gen: genOf,
         lesson: [
             { he: 'הַמִּילָּה "שֶׁל" אוֹמֶרֶת: כֶּפֶל! {{2/5}} שֶׁל 10 הֵם {{2/5}} כָּפוּל 10.', m: '2/5 x 10' },
             { he: 'דֶּרֶךְ קַלָּה: מְחַלְּקִים אֶת הַכַּמּוּת בַּמְּכַנֶּה, וְכוֹפְלִים בַּמּוֹנֶה.', m: '10 : 5 = 2', m2: '2 x 2 = 4' },
@@ -366,7 +349,7 @@ export const TOPICS = [
         ],
     },
     {
-        id: 'compare', icon: '⚖️', color: '#34d399', title: 'גָּדוֹל, קָטָן אוֹ שָׁוֶה?', sub: 'מָה קוֹרֶה כְּשֶׁכּוֹפְלִים', sample: '□ x 16 > 16', gen: genCompare, noPhoto: true,
+        id: 'compare', group: 'frac', icon: '⚖️', color: '#34d399', title: 'גָּדוֹל, קָטָן אוֹ שָׁוֶה?', sub: 'מָה קוֹרֶה כְּשֶׁכּוֹפְלִים', sample: '□ x 16 > 16', gen: genCompare, noPhoto: true,
         lesson: [
             { he: RULE['='], m: '1 x 4/5 = 4/5' },
             { he: RULE['>'], m: '2 x 16 > 16' },
@@ -374,7 +357,7 @@ export const TOPICS = [
         ],
     },
     {
-        id: 'word', icon: '📖', color: '#60a5fa', title: 'בְּעָיוֹת מִילּוּלִיּוֹת', sub: 'מִסִּיפּוּר לְתַרְגִּיל', sample: '3/8 x 240', gen: genWord,
+        id: 'word', group: 'frac', icon: '📖', color: '#60a5fa', title: 'בְּעָיוֹת מִילּוּלִיּוֹת', sub: 'מִסִּיפּוּר לְתַרְגִּיל', sample: '3/8 x 240', gen: genWord,
         lesson: [
             { he: 'קוֹרְאִים אֶת הַשְּׁאֵלָה לְאַט, וּמְחַפְּשִׂים: מָה הַכַּמּוּת הַשְּׁלֵמָה? אֵיזֶה חֵלֶק מְבַקְּשִׁים?' },
             { he: 'חֵלֶק שֶׁל כַּמּוּת הוּא כֶּפֶל. אִם {{3/8}} מִתּוֹךְ 240 תַּלְמִידִים הֵם בְּכִיתָּה א׳, כּוֹתְבִים תַּרְגִּיל.', m: '3/8 x 240 = 90' },
@@ -382,6 +365,17 @@ export const TOPICS = [
             { he: 'בַּסּוֹף כּוֹתְבִים תְּשׁוּבָה מְלֵאָה בְּמִילִּים, וּבוֹדְקִים שֶׁהִיא הֶגְיוֹנִית.' },
         ],
     },
+];
+
+// Home page order: fractions, then numbers and arithmetic, then geometry.
+const ORDER = ['ff', 'mixed', 'whole', 'chain', 'of', 'addsub', 'divide', 'order', 'compare', 'word', 'ops', 'big', 'estimate', 'solids', 'rect'];
+const ALL = [...TOPICS, ...MORE_TOPICS];
+TOPICS.splice(0, TOPICS.length, ...ORDER.map(id => ALL.find(t => t.id === id)));
+
+export const GROUPS = [
+    { id: 'frac', icon: '🍕', title: 'שְׁבָרִים' },
+    { id: 'num', icon: '🔢', title: 'מִסְפָּרִים וְחֶשְׁבּוֹן' },
+    { id: 'geo', icon: '📐', title: 'גֵּאוֹמֶטְרִיָּה' },
 ];
 
 export const topicById = id => TOPICS.find(t => t.id === id);

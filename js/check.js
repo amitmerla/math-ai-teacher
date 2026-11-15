@@ -15,7 +15,7 @@ export function normalize(src) {
         .replace(/[−–—]/g, '-')
         .replace(/[⁄∕]/g, '/')
         .replace(/_/g, ' ')
-        .replace(/(\d)[.,](\d{3})(?!\d)/g, '$1$2')      // 1,200 and 16.000 are whole numbers
+        .replace(/(?<=\d)[.,](?=\d{3}(?!\d))/g, '')    // 1,200 / 1,457,987 / 16.000 are whole numbers
         .replace(/[֐-׿$\\]+/g, ' ')             // Hebrew words, LaTeX leftovers
         .replace(/\s+/g, ' ')
         .trim();

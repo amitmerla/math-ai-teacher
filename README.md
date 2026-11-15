@@ -22,18 +22,28 @@ Mati needs Chrome's built-in AI with image input. At start the page checks for i
 
 ## Subjects (from the class worksheets)
 
-| # | Subject | Example |
-|---|---|---|
-| 1 | כפל שבר בשבר | 1/4 × 2/5 |
-| 2 | כפל מספרים מעורבים | 1/7 × 1 1/6 |
-| 3 | כפל שלם בשבר | 5 × 7/10 |
-| 4 | כפל של כמה שברים (reduce first) | 1/4 × 2/3 × 6/10 |
-| 5 | חלק של כמות ("של" = כפל) | 2/5 של 10 |
-| 6 | גדול, קטן או שווה? | □ × 16 > 16 |
-| 7 | בעיות מילוליות | 3/8 of 240 pupils |
+15 subjects in three groups on the home page.
+
+| Group | Subject | Example | Answer |
+|---|---|---|---|
+| שברים | כפל שבר בשבר | 1/4 × 2/5 | fraction |
+| | כפל מספרים מעורבים (incl. "a whole number that makes 2 1/3 × □ whole") | 1/7 × 1 1/6 | fraction / box |
+| | כפל שלם בשבר | 5 × 7/10 | fraction |
+| | כפל של כמה שברים (reduce first) | 1/4 × 2/3 × 6/10 | fraction |
+| | חלק של כמות ("של" = כפל) | 2/5 של 10 | number |
+| | חיבור וחיסור שברים (common denominator, mixed, borrowing) | 5 2/5 − 1 5/8 | fraction |
+| | חילוק ושברים (whole : whole, fraction : whole, rope / bottles / pizza) | 3/5 : 6 | fraction |
+| | מסדרים שברים ועשרוניים | 1/3, 0.5, 3/4, 31/40 | tap in order / < = > |
+| | גדול, קטן או שווה? | □ × 16 > 16 | box / < = > |
+| | בעיות מילוליות | 3/8 of 240 pupils | number |
+| מספרים וחשבון | סדר פעולות חשבון | 68 − 8 : 4 + 4 | number |
+| | חשבון במספרים גדולים (columns, place-value splits) | 59 × 325 | number |
+| | אומדן | 399,919 and 798,899 | multiple choice |
+| גאומטריה | מנסרות ופירמידות (lateral faces, edges, vertices, bases; true / false with counterexamples) | מנסרה מחומשת | number / true-false |
+| | שטח והיקף של מלבן (and backwards: find a side) | 12 × 7 | number |
 
 Each subject has two tabs:
-- **לומדים**: Mati explains the rule step by step on a board, with pictures (an area model and groups), then works through a new example.
+- **לומדים**: Mati explains the rule step by step on a board, with animated pictures (area model, groups, column arithmetic, number line, order-of-operations ladder, 3D prisms and pyramids, rectangles with unit squares), then works through a new example.
 - **מתרגלים**: new exercises every time, getting harder after every 3 correct answers (3 levels). Hint, full worked solution, another exercise.
 
 ## How a solution is checked
@@ -53,7 +63,10 @@ Chrome flags for photo reading: `chrome://flags/#prompt-api-for-gemini-nano`, `c
 index.html
 css/app.css     look, robot moods and animations
 js/app.js       screens, lesson, practice, photo flow, grading
-js/topics.js    the 7 subjects: lessons + exercise generators (steps, hints, known mistakes)
+js/topics.js    fraction subjects + the full subject list and groups
+js/topics-more.js  review-sheet subjects: add/subtract, divide, order, operations, big numbers, estimation, solids, rectangle
+js/gen.js       shared generator helpers
+js/viz.js       board pictures (SVG / HTML, animated)
 js/check.js     reads a written line and checks every step (exact, no AI)
 js/frac.js      exact fractions
 js/math.js      math markup → stacked fractions (HTML) and spoken Hebrew

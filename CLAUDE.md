@@ -9,6 +9,9 @@ Read README.md first. Fractions for 6th grade (Hebrew), led by the robot Mati. S
 - Photo reading uses **Chrome's built-in AI** (Gemini Nano), not a cloud API. The AI only copies handwriting; it never grades. The pupil confirms or fixes the copied lines, and `js/check.js` grades with exact fractions.
 - All Hebrew is plural / gender-neutral and written with **full niqqud on top of full spelling** (so removing marks gives normal spelling). The ניקוד switch shows it with or without marks; the voice always gets the pointed text.
 - Math inside Hebrew text is written as `{{markup}}` (see the top of js/math.js); the same markup is drawn and spoken.
+- Full spelling under the niqqud means no kubutz: דּוּגְמָה, not דֻּגְמָה. After a prefix with sheva, בג"ד כפ"ת letters lose the dagesh (לְפִירָמִידָה).
+- Every exercise generator gives the full worked steps, a hint and known wrong answers ("traps"). Every step with "=" must be exact: the check in the browser console that runs all generators and verifies each step with js/check.js should stay clean after changes.
+- Subjects come from the pupil's class worksheets; the November review sheet added the subjects in js/topics-more.js.
 - The look is "WOW": dark glass, gradients, a robot with moods (talk, happy, oops, think, scan, point, wave), confetti.
 
 ## Not verified yet

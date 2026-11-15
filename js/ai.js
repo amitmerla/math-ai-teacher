@@ -47,6 +47,8 @@ Rules:
 - When the top or bottom of a fraction is a calculation, use parentheses: (1x2)/(4x5).
 - Use x for multiplication, : for division, = for equals, + and - as written.
 - Copy the digits exactly as written, even when the math is wrong.
+- When numbers are written in columns (one under the other), write that calculation as one line, for example 415800-293400=122400.
+- Write big numbers without commas or dots between the thousands.
 - Skip words and anything that is crossed out.
 Return JSON: {"lines": ["..."]}`;
 

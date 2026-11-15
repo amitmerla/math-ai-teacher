@@ -6,7 +6,8 @@ import { $, $$, el, toast, confetti, confettiAt, pick, rnd } from './util.js';
 import { store } from './store.js';
 import { mathHTML, rich } from './math.js';
 import { f } from './frac.js';
-import { TOPICS, topicById } from './topics.js';
+import { TOPICS, GROUPS, topicById } from './topics.js';
+import { viz } from './viz.js';
 import { mati } from './avatar.js';
 import { watchNiqqud, refreshNiqqud, niqqudOn } from './niqqud.js';
 import { ai, aiBus, checkAI, downloadAI, readHandwriting, prepareImage } from './ai.js';
@@ -15,7 +16,7 @@ import { hasVoice, stopSpeaking } from './speech.js';
 
 const state = { topic: null, tab: 'learn', ex: null, tries: 0, revealed: false, done: false, failed: false, greeted: new Set(), scanning: false };
 
-const PRAISE = ['כָּל הַכָּבוֹד!', 'מְעוּלֶּה!', 'יוֹפִי שֶׁל עֲבוֹדָה!', 'בּוּל!', 'אַלּוּפִים!', 'וָואוּ, מְדֻיָּק!'];
+const PRAISE = ['כָּל הַכָּבוֹד!', 'מְעוּלֶּה!', 'יוֹפִי שֶׁל עֲבוֹדָה!', 'בּוּל!', 'אַלּוּפִים!', 'וָואוּ, מְדוּיָּק!'];
 const AGAIN = ['כִּמְעַט! נַסּוּ שׁוּב.', 'לֹא נוֹרָא, טוֹעִים וְלוֹמְדִים. נַסּוּ שׁוּב!', 'עוֹד לֹא. בִּדְקוּ שׁוּב אֶת הַדֶּרֶךְ.'];
 
 /* ================================================================ header */
@@ -68,7 +69,13 @@ function showHome() {
     $('#home').hidden = false;
     $('#topic').hidden = true;
     mati.moveTo($('#home-mati'));
-    $('#topics').replaceChildren(...TOPICS.map((t, i) => {
+    $('#topics').replaceChildren(...GROUPS.map(g => el('section', { class: 'group' },
+        el('h2', { class: 'section-title' }, el('span', { text: g.icon }), ' ', g.title),
+        el('div', { class: 'topics' }, TOPICS.filter(t => t.group === g.id).map(topicCard)))));
+    scrollTo({ top: 0 });
+}
+
+function topicCard(t, i) {
         const p = store.topic(t.id);
         const level = store.level(t.id);
         return el('button', { class: 'topic-card', type: 'button', style: { '--c': t.color, '--i': i }, onclick: () => openTopic(t.id) },
@@ -80,8 +87,6 @@ function showHome() {
             el('div', { class: 'tc-foot' },
                 el('span', { class: 'tc-level' }, ...[1, 2, 3].map(n => el('i', { class: n <= level ? 'on' : '' })), el('small', { text: `רָמָה ${level}` })),
                 el('span', { class: 'tc-ok', text: p.ok ? `✓ ${p.ok}` : 'חָדָשׁ!' })));
-    }));
-    scrollTo({ top: 0 });
 }
 
 function greet() {
@@ -119,26 +124,11 @@ $$('.tabs [role="tab"]').forEach(b => b.addEventListener('click', () => showTab(
 
 /* ================================================================ lesson */
 
-function viz(v) {
-    if (v.type === 'area') {
-        // a/b × c/d on a rectangle: c of d columns, a of b rows, and where they meet.
-        const cells = [];
-        for (let r = 0; r < v.b; r++) {
-            for (let c = 0; c < v.d; c++) {
-                cells.push(el('i', { class: `${c < v.c ? 'col' : ''} ${r < v.a ? 'row' : ''}`, style: { '--k': r * v.d + c } }));
-            }
-        }
-        return el('div', { class: 'viz' },
-            el('div', { class: 'viz-area', style: { '--cols': v.d } }, cells),
-            el('div', { class: 'viz-key' },
-                el('span', { class: 'k-col', html: rich(`{{${v.c}/${v.d}}} מֵהָעַמּוּדוֹת`) }),
-                el('span', { class: 'k-row', html: rich(`{{${v.a}/${v.b}}} מֵהַשּׁוּרוֹת`) }),
-                el('span', { class: 'k-both', html: rich(`גַּם וְגַם: {{${v.a * v.c}/${v.b * v.d}}}`) })));
-    }
-    const per = v.q / v.b;
-    return el('div', { class: 'viz' },
-        el('div', { class: 'viz-groups' }, Array.from({ length: v.b }, (_, g) =>
-            el('div', { class: `grp ${g < v.a ? 'on' : ''}`, style: { '--k': g } }, Array.from({ length: per }, () => el('i'))))));
+/** In a worked example, show what the pupil will choose from (options, numbers to order). */
+function exampleExtra(ex) {
+    if (ex.kind === 'choice') return el('div', { class: 'choices static' }, ex.options.map(o => el('span', { class: 'choice-btn', html: rich(o) })));
+    if (ex.kind === 'order') return el('div', { class: 'order-pool', dir: 'ltr' }, ex.items.map(it => el('span', { class: 'order-chip', html: mathHTML(it.mk, 'xl') })));
+    return null;
 }
 
 function renderLearn() {
@@ -146,8 +136,8 @@ function renderLearn() {
     const ex = t.gen(1);
     const steps = [
         ...t.lesson.map(s => ({ ...s, tag: 'הַכְּלָל' })),
-        { he: `עַכְשָׁיו נִפְתּוֹר יַחַד דֻּגְמָה. ${ex.he}`, m: ex.m, tag: 'דֻּגְמָה', group: 'ex' },
-        ...ex.steps.map(s => ({ ...s, tag: 'דֻּגְמָה', group: 'ex' })),
+        { he: `עַכְשָׁיו נִפְתּוֹר יַחַד דּוּגְמָה. ${ex.he}`, m: ex.m, viz: ex.viz, extra: exampleExtra(ex), tag: 'דּוּגְמָה', group: 'ex' },
+        ...ex.steps.map(s => ({ ...s, tag: 'דּוּגְמָה', group: 'ex' })),
         { he: 'זֶהוּ, עַכְשָׁיו אַתֶּם יוֹדְעִים! בּוֹאוּ נְתַרְגֵּל.', tag: 'סִיַּמְנוּ', end: true },
     ];
     let at = 0;
@@ -171,6 +161,7 @@ function renderLearn() {
             s.m && el('div', { class: 'board-math', html: mathHTML(s.m, 'xl') }),
             s.m2 && el('div', { class: 'board-math', html: mathHTML(s.m2, 'xl') }),
             s.viz && viz(s.viz),
+            s.extra,
             s.end && el('div', { class: 'board-end', text: '🎓' }),
         ].filter(Boolean));
         board.classList.remove('in'); void board.offsetWidth; board.classList.add('in');
@@ -195,7 +186,7 @@ function newExercise() {
         : pick(['הִנֵּה תַּרְגִּיל חָדָשׁ!', 'מוּכָנִים? הִנֵּה עוֹד אֶחָד!', 'בּוֹאוּ נִרְאֶה אֶת זֶה!']), { feel: 'point', chestSign: '?' });
 }
 
-const digitsOnly = e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6); };
+const digitsOnly = e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 9); };
 const numInput = (cls, label) => el('input', { class: cls, inputmode: 'numeric', autocomplete: 'off', 'aria-label': label, oninput: digitsOnly });
 
 function fracInput() {
@@ -223,10 +214,20 @@ function renderPractice() {
             el('span', { class: 'ex-tag', text: 'תַּרְגִּיל' }),
             el('span', { class: 'tc-level' }, ...[1, 2, 3].map(n => el('i', { class: n <= level ? 'on' : '' })), el('small', { text: `רָמָה ${level}` }))),
         el('p', { class: 'ex-text', html: rich(ex.he) }),
-        ex.m && el('div', { class: 'ex-math', html: mathHTML(ex.m, 'xl') }));
+        ex.m && el('div', { class: 'ex-math', html: mathHTML(ex.m, 'xl') }),
+        ex.viz && viz(ex.viz));
 
     let answer;
-    if (ex.kind === 'sign') {
+    if (ex.kind === 'choice') {
+        answer = el('div', { class: `choices ${ex.options.length === 2 ? 'two' : ''}` }, ex.options.map((o, i) =>
+            el('button', { class: 'choice-btn', type: 'button', html: rich(o), onclick: e => {
+                if (state.done) return;
+                e.currentTarget.classList.add(i === ex.correct ? 'right' : 'wrong');
+                submit({ choice: i });
+            } })));
+    } else if (ex.kind === 'order') {
+        answer = orderPicker(ex);
+    } else if (ex.kind === 'sign') {
         answer = el('div', { class: 'signs' }, ['<', '=', '>'].map(s =>
             el('button', { class: 'sign-btn', type: 'button', html: mathHTML(s, 'xl'), onclick: () => submit({ sign: s }) })));
     } else {
@@ -270,7 +271,46 @@ function stepList(steps) {
         el('div', { class: 'way-head' },
             el('p', { html: rich(s.he) }),
             el('button', { class: 'icon-btn sm', type: 'button', 'aria-label': 'השמיעו', text: '🔊', onclick: () => mati.say(s.he, { feel: 'point' }) })),
-        s.m && el('div', { class: 'way-math', html: mathHTML(s.m) }))));
+        s.m && el('div', { class: 'way-math', html: mathHTML(s.m) }),
+        s.m2 && el('div', { class: 'way-math', html: mathHTML(s.m2) }),
+        s.viz && viz(s.viz))));
+}
+
+/** Tap the numbers from smallest to largest; tap a filled slot to take it back. */
+function orderPicker(ex) {
+    const picked = [];
+    const pool = el('div', { class: 'order-pool', dir: 'ltr' });
+    const slots = el('div', { class: 'order-slots', dir: 'ltr' });
+    const draw = () => {
+        pool.replaceChildren(...ex.items.map((it, i) => el('button', {
+            class: 'order-chip', type: 'button', html: mathHTML(it.mk, 'xl'), disabled: picked.includes(i),
+            onclick: () => {
+                if (state.done) return;
+                picked.push(i);
+                draw();
+                if (picked.length === ex.items.length) submit({ order: [...picked] });
+            },
+        })));
+        slots.replaceChildren(...ex.items.flatMap((_, k) => [
+            k > 0 && el('span', { class: 'order-lt', html: mathHTML('<', 'xl') }),
+            el('button', {
+                class: `order-slot ${picked[k] != null ? 'full' : ''}`, type: 'button',
+                html: picked[k] != null ? mathHTML(ex.items[picked[k]].mk, 'xl') : '',
+                onclick: () => { if (picked[k] != null && !state.done) { picked.splice(k); draw(); } },
+            }),
+        ]).filter(Boolean));
+    };
+    draw();
+    return el('div', { class: 'order-box' }, pool,
+        el('div', { class: 'order-ends' }, el('span', { text: 'הַגָּדוֹל' }), el('span', { text: 'הַקָּטָן' })),
+        slots);
+}
+
+function answerView(ex) {
+    if (ex.kind === 'choice') return rich(ex.options[ex.correct]);
+    if (ex.kind === 'order') return mathHTML(ex.order.map(i => ex.items[i].mk).join(' < '), 'xl');
+    if (ex.kind === 'frac' || ex.kind === 'int') return `${mathHTML(ex.answer.mk(), 'xl')}${ex.unit ? ` <span>${ex.unit}</span>` : ''}`;
+    return null;
 }
 
 function showSolution() {
@@ -296,6 +336,13 @@ function submit(got, way) {
     if (ex.kind === 'sign') {
         ok = got.sign === ex.sign;
         if (!ok) trap = ex.hint;
+    } else if (ex.kind === 'choice') {
+        ok = got.choice === ex.correct;
+        if (ex.reason) notes = [ex.reason];
+        else if (!ok) trap = ex.why?.[got.choice] ?? ex.hint;
+    } else if (ex.kind === 'order') {
+        ok = got.order.every((i, k) => i === ex.order[k]);
+        if (!ok) trap = `${ex.hint} נִגְעוּ בְּמִסְפָּר שֶׁכְּבָר בַּשּׁוּרָה כְּדֵי לְהַחְזִיר אוֹתוֹ.`;
     } else {
         ({ ok, notes, trap } = grade(ex, got.v, got.lit));
     }
@@ -306,15 +353,17 @@ function submit(got, way) {
     let stars = 0;
     if (ok) {
         state.done = true;
-        stars = state.revealed ? 0 : Math.max(1, 4 - state.tries - (notes.length ? 1 : 0));
+        stars = state.revealed ? 0 : Math.max(1, 4 - state.tries - (notes.length && !ex.reason ? 1 : 0));
         store.record(state.topic.id, true, stars);
     } else if (!state.failed) {
         state.failed = true;
         store.record(state.topic.id, false, 0);
     }
+    // A true / false question has only one other answer, so a miss ends it (the answer is shown).
+    if (!ok && ex.kind === 'choice' && ex.options.length === 2) state.done = true;
     refreshStats(true);
 
-    const title = ok ? pick(PRAISE) : pick(AGAIN);
+    const title = ok ? pick(PRAISE) : state.done ? 'לֹא נוֹרָא, עַכְשָׁיו אַתֶּם יוֹדְעִים!' : pick(AGAIN);
     const fb = $('#feedback');
     fb.replaceChildren(el('div', { class: `verdict ${ok ? 'ok' : 'bad'}` },
         el('div', { class: 'verdict-head' },
@@ -323,9 +372,9 @@ function submit(got, way) {
             ok && el('span', { class: 'verdict-stars' }, [1, 2, 3].map(n => el('i', { class: n <= stars ? 'on' : '', style: { '--k': n }, text: '★' })))),
         way?.rows,
         remarks.length ? el('ul', { class: 'remarks' }, remarks.map(r => el('li', { html: rich(r) }))) : null,
-        ok && ex.kind !== 'sign' && ex.kind !== 'box' && el('div', { class: 'verdict-answer', html: `${rich('הַתְּשׁוּבָה:')} ${mathHTML(ex.answer.mk(), 'xl')}${ex.unit ? ` <span>${ex.unit}</span>` : ''}` }),
+        (ok || state.done) && answerView(ex) && el('div', { class: 'verdict-answer', html: `${rich('הַתְּשׁוּבָה:')} ${answerView(ex)}` }),
         el('div', { class: 'verdict-actions' },
-            ok
+            ok || state.done
                 ? el('button', { class: 'btn primary big', type: 'button', text: 'תַּרְגִּיל הַבָּא ←', onclick: newExercise })
                 : el('button', { class: 'btn ghost', type: 'button', text: '👀 הַרְאוּ לִי אֶת הַדֶּרֶךְ', onclick: showSolution }))));
     fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -441,7 +490,7 @@ function checkWay(list) {
         remarks.push(r);
     }
     const start = an.rows[0].sides[0];
-    if (ex.m && ex.kind === 'frac' && an.rows[0].sides.length > 1 && start.values.length && !start.values.some(v => v.eq(ex.answer))) {
+    if (ex.m && (ex.kind === 'frac' || ex.kind === 'int') && an.rows[0].sides.length > 1 && start.values.length && !start.values.some(v => v.eq(ex.answer))) {
         remarks.push('הַשּׁוּרָה הָרִאשׁוֹנָה לֹא מַתְאִימָה לַתַּרְגִּיל שֶׁעַל הַלּוּחַ. בִּדְקוּ שֶׁהֶעְתַּקְתֶּם נָכוֹן.');
     }
     if (an.unfinished) remarks.push('הַדֶּרֶךְ נִגְמֶרֶת בְּסִימַן שָׁוֶה, בְּלִי תּוֹצָאָה. הַשְׁלִימוּ אֶת הַצַּעַד הָאַחֲרוֹן.');
@@ -512,10 +561,10 @@ function gateUpdate() {
     }
     gate({
         title: 'אוֹי, הַמַּחְשֵׁב הַזֶּה לֹא מַתְאִים לִי', feel: 'oops', chestSign: '!',
-        text: 'כְּדֵי שֶׁאוּכַל לִקְרוֹא אֶת הַפִּתְרוֹנוֹת שֶׁלָּכֶם, אֲנִי צָרִיךְ מַחְשֵׁב נַיָּד חָזָק יוֹתֵר, עִם דַּפְדְּפָן כְּרוֹם מְעֻדְכָּן לַגִּרְסָה הָאַחֲרוֹנָה. בַּקְּשׁוּ עֶזְרָה מֵהוֹרֶה.',
+        text: 'כְּדֵי שֶׁאוּכַל לִקְרוֹא אֶת הַפִּתְרוֹנוֹת שֶׁלָּכֶם, אֲנִי צָרִיךְ מַחְשֵׁב נַיָּד חָזָק יוֹתֵר, עִם דַּפְדְּפָן כְּרוֹם מְעוּדְכָּן לַגִּרְסָה הָאַחֲרוֹנָה. בַּקְּשׁוּ עֶזְרָה מֵהוֹרֶה.',
         list: [
             ['💻', 'מַחְשֵׁב חָזָק: לְפָחוֹת 16GB זִכָּרוֹן, אוֹ כַּרְטִיס מָסָךְ עִם יוֹתֵר מִ-4GB.'],
-            ['🌐', 'דַּפְדְּפָן Google Chrome, מְעֻדְכָּן לַגִּרְסָה הָאַחֲרוֹנָה.'],
+            ['🌐', 'דַּפְדְּפָן Google Chrome, מְעוּדְכָּן לַגִּרְסָה הָאַחֲרוֹנָה.'],
             ['💾', 'לְפָחוֹת 22GB מָקוֹם פָּנוּי בַּדִּיסְק.'],
         ],
         actions: [el('button', { class: 'btn ghost', type: 'button', text: '🔄 בִּדְקוּ שׁוּב', onclick: () => { ai.status = 'checking'; gateUpdate(); checkAI(); } })],

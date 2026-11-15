@@ -4,14 +4,15 @@
 //   1_1/6                mixed number
 //   [1 x 2]/[4 x 5]      fraction with an expression above and below
 //   6>3                  6 crossed out and replaced by 3 (reducing before multiplying)
-//   x : + - = < > ( ) ?  signs          □  empty box          ○  empty circle
+//   0.75                 decimal number
+//   x : + - = < > ( ) ?  signs (≈ too)          □  empty box          ○  empty circle
 //   anything else        plain text
 //
 // Tokens are separated by spaces. In Hebrew text, math sits inside {{ ... }}.
 
 import { esc } from './util.js';
 
-const SIGNS = { x: '×', ':': ':', '=': '=', '+': '+', '-': '−', '<': '<', '>': '>', '(': '(', ')': ')', '?': '?' };
+const SIGNS = { x: '×', ':': ':', '=': '=', '+': '+', '-': '−', '<': '<', '>': '>', '(': '(', ')': ')', '?': '?', '≈': '≈' };
 
 const tokens = mk => mk.match(/\[[^\]]*\]\/\[[^\]]*\]|\S+/g) ?? [];
 const showNum = s => (Number(s) >= 1000 ? Number(s).toLocaleString('en-US') : s);
@@ -25,6 +26,7 @@ function tokHTML(t) {
     if ((m = t.match(/^(\d+)\/(\d+)$/))) return frac(m[1], m[2]);
     if ((m = t.match(/^(\d+)>(\d+)$/))) return `<span class="cx"><s>${m[1]}</s><sup>${m[2]}</sup></span>`;
     if (/^\d+$/.test(t)) return `<span class="num">${showNum(t)}</span>`;
+    if (/^\d+\.\d+$/.test(t)) return `<span class="num">${t}</span>`;
     if (t === '□') return '<span class="box"></span>';
     if (t === '○') return '<span class="circ"></span>';
     if (SIGNS[t]) return `<span class="op">${SIGNS[t]}</span>`;
@@ -57,7 +59,7 @@ function sayFrac(n, d) {
     return `${count} ${names[1]}`;
 }
 
-const SAY = { x: 'כָּפוּל', ':': 'לְחַלֵּק לְ', '=': 'שָׁוֶה', '+': 'וְעוֹד', '-': 'פָּחוֹת', '<': 'קָטָן מִ', '>': 'גָּדוֹל מִ', '(': '', ')': '', '?': '', '□': 'מִסְפָּר', '○': '' };
+const SAY = { '≈': 'בְּעֵרֶךְ', n: 'אֵן', x: 'כָּפוּל', ':': 'לְחַלֵּק לְ', '=': 'שָׁוֶה', '+': 'וְעוֹד', '-': 'פָּחוֹת', '<': 'קָטָן מִ', '>': 'גָּדוֹל מִ', '(': '', ')': '', '?': '', '□': 'מִסְפָּר', '○': '' };
 
 function tokSay(t) {
     let m;
@@ -65,6 +67,7 @@ function tokSay(t) {
     if ((m = t.match(/^(\d+)_(\d+)\/(\d+)$/))) return `${m[1]} וְ${sayFrac(m[2], m[3])}`;
     if ((m = t.match(/^(\d+)\/(\d+)$/))) return sayFrac(m[1], m[2]);
     if ((m = t.match(/^(\d+)>(\d+)$/))) return m[2];
+    if ((m = t.match(/^(\d+)\.(\d+)$/))) return `${m[1]} נְקוּדָה ${m[2]}`;
     return t in SAY ? SAY[t] : t;
 }
 
