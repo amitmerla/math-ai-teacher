@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>מתי · מורה למתמטיקה</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+</head>
+<body>
+    <div class="sky" aria-hidden="true">
+        <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+        <div class="grid-floor"></div>
+        <div id="floaters"></div>
+    </div>
+    <canvas id="fx-canvas" aria-hidden="true"></canvas>
+
+    <header class="top">
+        <button class="brand" id="go-home" type="button">
+            <span class="brand-logo">🤖</span>
+            <span class="brand-text"><b class="grad-text">מַתִּי</b><small>שְׁבָרִים · כִּיתָּה ו׳</small></span>
+        </button>
+        <div class="top-side" id="top-side" hidden>
+            <div class="stat" id="stat-stars" title="כּוֹכָבִים"><span>⭐</span><b>0</b></div>
+            <div class="stat" id="stat-streak" title="רֶצֶף תְּשׁוּבוֹת נְכוֹנוֹת"><span>🔥</span><b>0</b></div>
+            <button class="chip" id="ai-chip" type="button"><span class="chip-dot"></span><span class="chip-text">בּוֹדֵק...</span></button>
+            <button class="switch" id="sw-niqqud" type="button" aria-pressed="true"><span class="sw-icon">אָ</span><span>נִיקּוּד</span><i class="sw-dot"></i></button>
+            <button class="icon-btn" id="sw-sound" type="button" aria-label="קול">🔊</button>
+        </div>
+    </header>
+
+    <main>
+        <section id="gate">
+            <div class="gate-mati" id="gate-mati"></div>
+            <div class="gate-card">
+                <h1 id="gate-title"></h1>
+                <p id="gate-text"></p>
+                <ul class="gate-list" id="gate-list" hidden></ul>
+                <div class="gate-bar" id="gate-bar" hidden><i></i></div>
+                <div class="gate-actions" id="gate-actions"></div>
+            </div>
+        </section>
+
+        <section id="home" hidden>
+            <div class="hero">
+                <div class="hero-mati" id="home-mati"></div>
+                <div class="hero-text">
+                    <h1><span class="grad-text">שְׁבָרִים?</span> קַלֵּי קַלּוּת!</h1>
+                    <p>לוֹמְדִים עִם מַתִּי, פּוֹתְרִים בַּמַּחְבֶּרֶת, מְצַלְּמִים אֶת הַדֶּרֶךְ, וּמַתִּי בּוֹדֵק כָּל שָׁלָב.</p>
+                    <div class="how">
+                        <span><i>1</i>לוֹמְדִים</span><span><i>2</i>פּוֹתְרִים</span><span><i>3</i>מְצַלְּמִים</span><span><i>4</i>מְקַבְּלִים הֶעָרוֹת</span>
+                    </div>
+                </div>
+            </div>
+            <h2 class="section-title">בַּחֲרוּ נוֹשֵׂא</h2>
+            <div class="topics" id="topics"></div>
+        </section>
+
+        <section id="topic" hidden>
+            <div class="t-head">
+                <button class="btn ghost" id="t-back" type="button">→ כָּל הַנּוֹשְׂאִים</button>
+                <h2 id="t-title"></h2>
+                <div class="tabs" role="tablist">
+                    <button role="tab" data-tab="learn" type="button">💡 לוֹמְדִים</button>
+                    <button role="tab" data-tab="practice" type="button">✏️ מְתַרְגְּלִים</button>
+                </div>
+            </div>
+            <div class="t-body">
+                <aside class="dock" id="dock"></aside>
+                <div class="stage" id="stage"></div>
+            </div>
+        </section>
+    </main>
+
+    <dialog id="hello" class="modal">
+        <form method="dialog" id="hello-form">
+            <div class="modal-emoji">👋</div>
+            <h2>שָׁלוֹם! אֲנִי מַתִּי</h2>
+            <p>אֲנִי רוֹבּוֹט שֶׁאוֹהֵב מָתֵמָטִיקָה. אֵיךְ קוֹרְאִים לָכֶם?</p>
+            <input id="hello-name" maxlength="20" autocomplete="off" placeholder="השם שלי" required>
+            <button class="btn primary big" type="submit">מַתְחִילִים! 🚀</button>
+        </form>
+    </dialog>
+
+    <input type="file" id="photo-input" accept="image/*,.heic,.heif" hidden>
+    <div id="toasts" aria-live="polite"></div>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
